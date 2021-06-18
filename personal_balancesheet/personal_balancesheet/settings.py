@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'webapp',
-    'django.contrib.humanize'
+    'django.contrib.humanize',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -65,10 +66,26 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
 ]
+
+AUTHENTICATION_BACKENDS = (
+ 'social_core.backends.open_id.OpenIdAuth',
+ 'social_core.backends.google.GoogleOAuth2',
+ 'social_core.backends.github.GithubOAuth2',
+ 'social_core.backends.facebook.FacebookOAuth2',
+
+ 'django.contrib.auth.backends.ModelBackend',
+)
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '922929566133-396ofoq2l1aa5hk5hnto64lfq3pmhjg0.apps.googleusercontent.com'  #Paste CLient Key
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'bqQTmwVXG0vWMoTzpXvog3Bo' #Paste Secret Key
 
 WSGI_APPLICATION = 'personal_balancesheet.wsgi.application'
 
@@ -126,3 +143,7 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

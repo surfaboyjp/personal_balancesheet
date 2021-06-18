@@ -3,41 +3,62 @@ from django.views import generic
 from django.views.generic import TemplateView, DetailView, ListView, CreateView
 from .models import *
 from django.views.generic.list import MultipleObjectMixin  # この行を追加
+from django.views.generic.edit import ModelFormMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy
 from .Form import *
 from django.urls import reverse_lazy
 from django.contrib.auth import login
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
+import json
 
 
 class IndexView(TemplateView):
     template_name = 'webapp/index.html'
 
     def get_context_data(self, **kwargs):
-        journal_list = Journal.objects.all().order_by('-created_at')
+        journal_list = Journal.objects.filter(user=self.request.user).all().order_by('-created_at')
         params = {
             'journal_list': journal_list,
         }
         return params
+
+    def get(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/login')
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
 
 
 class JournalDetailView(DetailView, MultipleObjectMixin):
     model = Journal
     template_name = 'webapp/journal_detail.html'
 
+    def get(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/login')
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
+
     def get_context_data(self, **kwargs):
         context = {
+            'journal_id': kwargs.get('pk'),
             'bs': self.get_bs_dict(),
             'pl': self.get_pl_dict(),
+            'records': self.get_records(),
         }
-        print(self.get_bs_dict()["fixed_asset_list"])
         return context
 
+    def get_records(self):
+        records = list(JournalRecord.objects.filter(journal=self.kwargs.get('pk')).order_by('-closed_at').values())[:11]
+        return records
+
     def get_bs_dict(self):
-        assets = list(Asset.objects.all().values())
-        liabilities = list(Liability.objects.all().values())
+        assets = list(Asset.objects.filter(journal=self.kwargs.get('pk')).all().values())
+        liabilities = list(Liability.objects.filter(journal=self.kwargs.get('pk')).all().values())
         liquid_assets = [x for x in assets if x['category'] == 'L']
         la_sum = get_value_sum(liquid_assets)
         fixed_assets = [x for x in assets if x['category'] == 'F']
@@ -93,8 +114,8 @@ class JournalDetailView(DetailView, MultipleObjectMixin):
         return bs
 
     def get_pl_dict(self):
-        incomes = list(Income.objects.all().values())
-        costs = list(Cost.objects.all().values())
+        incomes = list(Income.objects.filter(journal=self.kwargs.get('pk')).all().values())
+        costs = list(Cost.objects.filter(journal=self.kwargs.get('pk')).all().values())
         main_incomes = [y for y in incomes if y['category'] == 'M']
         mi_sum = get_value_sum(main_incomes)
         sub_incomes = [y for y in incomes if y['category'] == 'S']
@@ -108,28 +129,103 @@ class JournalDetailView(DetailView, MultipleObjectMixin):
         income_sum = mi_sum + si_sum
         cost_sum = lc_sum + fc_sum
         saving = income_sum - cost_sum
+
+        get_rate_in_list(main_incomes, income_sum)
+        get_rate_in_list(sub_incomes, income_sum)
+        get_rate_in_list(liquid_costs, income_sum)
+        get_rate_in_list(fixed_costs, income_sum)
+
+        cost_rate = numpy.float64(cost_sum) / income_sum * 100
+        main_income_rate = numpy.float64(mi_sum) / income_sum * 100
+        sub_income_rate = numpy.float64(si_sum) / income_sum * 100
+        liquid_cost_rate = numpy.float64(lc_sum) / income_sum * 100
+        fixed_cost_rate = numpy.float64(fc_sum) / income_sum * 100
+        saving_rate = numpy.float64(saving) / income_sum * 100
+
         pl = {
             'income': income_sum,
             'main_incomes': mi_sum,
+            'main_income_rate': main_income_rate,
             'main_income_list': main_incomes,
             'sub_incomes': si_sum,
+            'sub_income_rate': sub_income_rate,
             'sub_income_list': sub_incomes,
             'cost': cost_sum,
+            'cost_rate': cost_rate,
             'liquid_costs': lc_sum,
+            'liquid_cost_rate': liquid_cost_rate,
             'liquid_cost_list': liquid_costs,
             'fixed_costs': fc_sum,
+            'fixed_cost_rate': fixed_cost_rate,
             'fixed_cost_list': fixed_costs,
-            'saving': saving
+            'saving': saving,
+            'saving_rate': saving_rate,
         }
         return pl
 
 
-class RecordView(ListView):
+class RecordView(TemplateView):
     model = JournalRecord
+    template_name = 'webapp/records.html'
+
+    def get(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/login')
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        journal = Journal.objects.get(id=self.kwargs.get('pk'))
+        records = JournalRecord.objects.filter(journal=journal).all().order_by('-created_at')
+        context = {
+            'journal_id': journal.id,
+            'records_list': records,
+        }
+        return context
 
 
 class RecordDetailView(DetailView):
     model = JournalRecord
+    template_name = 'webapp/record_detail.html'
+
+    def get(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/login')
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        record = JournalRecord.objects.get(id=self.kwargs.get('record_pk'))
+        la_json = json.loads(record.liquid_asset_list)
+        record.liquid_asset_list = la_json
+
+        fa_json = json.loads(record.fixed_asset_list)
+        record.fixed_asset_list = fa_json
+
+        da_json = json.loads(record.deferred_asset_list)
+        record.deferred_asset_list = da_json
+
+        ll_json = json.loads(record.liquid_liability_list)
+        record.liquid_liability_list = ll_json
+
+        fl_json = json.loads(record.fixed_liability_list)
+        record.fixed_liability_list = fl_json
+
+        mi_json = json.loads(record.main_income_list)
+        record.main_income_list = mi_json
+
+        si_json = json.loads(record.sub_income_list)
+        record.sub_income_list = si_json
+
+        lc_json = json.loads(record.liquid_cost_list)
+        record.liquid_cost_list = lc_json
+
+        fc_json = json.loads(record.fixed_cost_list)
+        record.fixed_cost_list = fc_json
+        context = {
+            'record': record,
+        }
+        return context
 
 
 # class FstatementView(DetailView):
@@ -151,6 +247,29 @@ class CreateUserView(CreateView):
 class LoginView(LoginView):
     form_class = LoginForm
     template_name = 'webapp/login.html'
+
+
+class Logout(LoginRequiredMixin, LogoutView):
+    template_name = 'webapp/login.html'
+
+
+class AddAssetView(CreateView):
+    template_name = 'webapp/add_asset.html'
+    model = Asset
+    form_class = AssetForm
+    success_url = reverse_lazy('webapp:index')
+
+    def form_valid(self, form):
+        print(form.instance.user.id)
+        form.instance.user_id = self.request.user.id
+        return super(AddAssetView, self).form_valid(form)
+
+
+class AddLiabilityView(CreateView):
+    template_name = 'webapp/add_liability.html'
+    model = Liability
+    form_class = LiabilityForm
+    success_url = reverse_lazy('webapp:index')
 
 
 def get_value_sum(dict_list):

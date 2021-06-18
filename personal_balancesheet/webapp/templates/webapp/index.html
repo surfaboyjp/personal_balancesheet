@@ -22,7 +22,7 @@
     <thead>
         <tr>
             <th class="text-center" width="40%">個人名</th>
-            <th class="text-center" width="40%">決算日</th>
+            <th class="text-center" width="40%">更新日</th>
             <th class="text-center">内容</th>
         </tr>
     </thead>
@@ -30,7 +30,7 @@
         {% for journal in journal_list %}
         <tr class="odd gradeX text-center">
             <td class="text-center">{{ journal.name}}</td>
-            <td class="text-center">{{ journal.updated_at }}</td>
+            <td class="text-center">{{ journal.updated_at|date:"Y/m/d" }}</td>
 
             <!-- hrefの内容を記載-->
             <td><a href="{% url 'webapp:journal_detail' journal.pk %}">詳細へ</a></td>

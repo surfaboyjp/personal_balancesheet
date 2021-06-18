@@ -89,3 +89,23 @@ h4.bank_name {
 .rate-color {
     color: #555;
 }
+
+.oauth-g {
+    position: relative;
+    width: 100%;
+    height: 10vh;
+    bolder: 1px solid black;
+}
+
+.oauth-g i{
+    position: absolute;
+    left: 0;
+    top: 50%;
+}
+.oauth-g h3 {
+    margin: 0;
+    position: absolute;
+    right: 0;
+    font-size: 20px;
+    top: 50%;
+}
