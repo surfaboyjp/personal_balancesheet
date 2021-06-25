@@ -53,21 +53,25 @@
                         <a class="nav-link" href="https://django-blog1976.herokuapp.com/">複利の魔法 Blog<i class="fas fa-home"></i></a>
                     </li>
 
-                    <li class="nav-item dropdown mx-3">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            項目追加
-                        </a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                            <a class="dropdown-item" href="{% url 'webapp:add_asset' %}">資産を追加</a>
-                            <a class="dropdown-item" href="{% url 'webapp:add_liability' %}">負債を追加</a>
-                            <a class="dropdown-item" href="{% url 'webapp:add_income' %}">収入を追加</a>
-                            <a class="dropdown-item" href="{% url 'webapp:add_cost' %}">支出を追加</a>
-                        </div>
-                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown mx-3">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                項目追加
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="{% url 'webapp:add_journal' %}">帳簿を追加</a>
+                                <a class="dropdown-item" href="{% url 'webapp:add_asset' %}">資産を追加</a>
+                                <a class="dropdown-item" href="{% url 'webapp:add_liability' %}">負債を追加</a>
+                                <a class="dropdown-item" href="{% url 'webapp:add_income' %}">収入を追加</a>
+                                <a class="dropdown-item" href="{% url 'webapp:add_cost' %}">支出を追加</a>
+                            </div>
+                        </li>
+                    {% endif %}
 
                 </ul>
             </div>
 
+            {% if user.is_authenticated %}
             <div class="nav-item dropdown mx-3">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     {{ request.user }}
@@ -76,6 +80,7 @@
                     <a class="dropdown-item" href="{% url 'webapp:logout' %}">ログアウト</a>
                 </div>
             </div>
+            {% endif %}
         </nav>
         <main>
             <div class="container">

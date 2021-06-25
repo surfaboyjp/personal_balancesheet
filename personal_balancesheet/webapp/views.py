@@ -40,6 +40,11 @@ class JournalDetailView(DetailView, MultipleObjectMixin):
     def get(self, request, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/login')
+
+        journal = Journal.objects.get(id=kwargs.get('pk'))
+        print(journal)
+        if not journal.user == request.user:
+            return redirect('/')
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
@@ -171,6 +176,10 @@ class RecordView(TemplateView):
     def get(self, request, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/login')
+
+        journal = Journal.objects.get(id=kwargs.get('pk'))
+        if not journal.user == request.user:
+            return redirect('/')
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
@@ -191,6 +200,10 @@ class RecordDetailView(DetailView):
     def get(self, request, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/login')
+
+        record = JournalRecord.objects.get(id=kwargs.get('record_pk'))
+        if not record.journal.user == request.user:
+            return redirect('/')
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
@@ -238,7 +251,6 @@ class CreateUserView(CreateView):
 
     def form_valid(self, form):
         user = form.save()
-        login(self.request, user)
         self.object = user
         messages.info(self.request, 'ユーザー登録をしました。')
         return HttpResponseRedirect(self.get_success_url())
@@ -259,17 +271,51 @@ class AddAssetView(CreateView):
     form_class = AssetForm
     success_url = reverse_lazy('webapp:index')
 
-    def form_valid(self, form):
-        print(form.instance.user.id)
-        form.instance.user_id = self.request.user.id
-        return super(AddAssetView, self).form_valid(form)
-
 
 class AddLiabilityView(CreateView):
     template_name = 'webapp/add_liability.html'
     model = Liability
     form_class = LiabilityForm
     success_url = reverse_lazy('webapp:index')
+
+
+class AddIncomeView(CreateView):
+    template_name = 'webapp/add_income.html'
+    model = Income
+    form_class = IncomeForm
+    success_url = reverse_lazy('webapp:index')
+
+
+class AddCostView(CreateView):
+    template_name = 'webapp/add_cost.html'
+    model = Cost
+    form_class = CostForm
+    success_url = reverse_lazy('webapp:index')
+
+
+class AddJournalView(CreateView):
+    template_name = 'webapp/add_journal.html'
+    model = Journal
+    form_class = JournalForm
+    success_url = reverse_lazy('webapp:index')
+
+    # def get(self, request, *args, **kwargs):
+    #     form_class = self.get_form_class()
+    #     form = form_class(user=request.user)
+    #     return super(AddJournalView, self).get(self.request)
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super(AddJournalView, self).get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    # def form_valid(self, form):
+    #     form['user'] = self.request.user
+    #     form.save()
+    #     # journal = form.save(commit=False)
+    #     # journal.create_user = self.request.user
+    #     # journal.save()
+    #     return super().form_valid(form)
 
 
 def get_value_sum(dict_list):

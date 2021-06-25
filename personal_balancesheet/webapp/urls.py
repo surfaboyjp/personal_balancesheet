@@ -7,10 +7,11 @@ app_name = 'webapp'
 
 urlpatterns = [
     path('', views.IndexView.as_view(), name='index'),
+    path('journals', views.AddJournalView.as_view(), name='add_journal'),
     path('assets', views.AddAssetView.as_view(), name='add_asset'),
     path('liability', views.AddLiabilityView.as_view(), name='add_liability'),
-    path('income', views.AddAssetView.as_view(), name='add_income'),
-    path('cost', views.AddAssetView.as_view(), name='add_cost'),
+    path('income', views.AddIncomeView.as_view(), name='add_income'),
+    path('cost', views.AddCostView.as_view(), name='add_cost'),
     path('journals/<int:pk>/', views.JournalDetailView.as_view(), name='journal_detail'),
     path('journals/<int:pk>/records/', views.RecordView.as_view(), name='records'),
     path('journals/<int:pk>/records/<int:record_pk>', views.RecordDetailView.as_view(), name='record_detail'),
